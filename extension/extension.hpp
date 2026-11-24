@@ -26,6 +26,8 @@
  * @brief TF2Items extension code header.
  */
 
+#include <cstddef>
+
 #include "smsdk_ext.hpp"
 
 //#include "iplayerinfo.h"
@@ -75,15 +77,17 @@ public:
 class CEconItemAttribute
 {
 public:
-	void *m_pVTable; //0
+	void *m_pVTable;
 
-	uint16 m_iAttributeDefinitionIndex; //4
-	float m_flValue; //8
-	int32 m_nRefundableCurrency; //12
+	uint16 m_iAttributeDefinitionIndex;
+	float m_flValue;
+	int32 m_nRefundableCurrency;
 };
 
+// TF2 uses 4-byte packing for the 32-bit item types.
+#ifndef PLATFORM_64BITS
 #pragma pack(push, 4)
-
+#endif
 
 class CEconItemHandle
 {
@@ -121,65 +125,86 @@ public:
 class CEconItemView
 {
 public:
-	void *m_pVTable; //0
+	void *m_pVTable;
 
-	uint16 m_iItemDefinitionIndex; //4
+	uint16 m_iItemDefinitionIndex;
 	
-	int32 m_iEntityQuality; //8
-	uint32 m_iEntityLevel; //12
+	int32 m_iEntityQuality;
+	uint32 m_iEntityLevel;
 
-	uint64 m_iItemID; //16
-	uint32 m_iItemIDHigh; //24
-	uint32 m_iItemIDLow; //28
+	uint64 m_iItemID;
+	uint32 m_iItemIDHigh;
+	uint32 m_iItemIDLow;
 
-	uint32 m_iAccountID; //32
+	uint32 m_iAccountID;
 
-	uint32 m_iInventoryPosition; //36
+	uint32 m_iInventoryPosition;
 	
-	CEconItemHandle m_ItemHandle; //40 (44, 48, 52, 56, 60)
+	CEconItemHandle m_ItemHandle;
 
-	bool m_bColorInit; //64
-	bool m_bPaintOverrideInit; //65
-	bool m_bHasPaintOverride; //66
-	//67
+	bool m_bColorInit;
+	bool m_bPaintOverrideInit;
+	bool m_bHasPaintOverride;
 
-	float m_flOverrideIndex; //68
-	uint32 m_unRGB; //72
-	uint32 m_unAltRGB; //76
 
-	int32 m_iTeamNumber; //80
+	float m_flOverrideIndex;
+	uint32 m_unRGB;
+	uint32 m_unAltRGB;
 
-	bool m_bInitialized; //84
+	int32 m_iTeamNumber;
 
-	CAttributeList m_AttributeList; //88 (92, 96, 100, 104, 108, 112)
-	CAttributeList m_NetworkedDynamicAttributesForDemos; //116 (120, 124, 128, 132, 136, 140)
+	bool m_bInitialized;
 
-	bool m_bDoNotIterateStaticAttributes; //144
+	CAttributeList m_AttributeList;
+	CAttributeList m_NetworkedDynamicAttributesForDemos;
+
+	bool m_bDoNotIterateStaticAttributes;
 };
 
+#ifndef PLATFORM_64BITS
 #pragma pack(pop)
-
-static_assert(sizeof(CEconItemView) == 148, "CEconItemView - incorrect size on this compiler");
-static_assert(sizeof(CEconItemHandle) == 24, "CEconItemHandle - incorrect size on this compiler");
-static_assert(sizeof(CAttributeList) == 28, "CAttributeList - incorrect size on this compiler");
-
-// enable to debug memory layout issues
-#if 0
-template<int s> struct Sizer;
-Sizer<sizeof(CEconItemView)> CEconItemViewSize;
-Sizer<sizeof(CEconItemHandle)> CEconItemHandleSize;
-Sizer<sizeof(CAttributeList)> CAttributeListSize;
 #endif
+
+// Match the dedicated server's item layout on each target.
+constexpr bool kTF2Items64Bit = sizeof(void *) == 8;
+
+static_assert(sizeof(CEconItemAttribute) == (kTF2Items64Bit ? 24 : 16));
+static_assert(offsetof(CEconItemAttribute, m_iAttributeDefinitionIndex) == (kTF2Items64Bit ? 8 : 4));
+static_assert(offsetof(CEconItemAttribute, m_flValue) == (kTF2Items64Bit ? 12 : 8));
+static_assert(offsetof(CEconItemAttribute, m_nRefundableCurrency) == (kTF2Items64Bit ? 16 : 12));
+
+static_assert(sizeof(CEconItemHandle) == (kTF2Items64Bit ? 32 : 24));
+static_assert(offsetof(CEconItemHandle, m_pItem) == (kTF2Items64Bit ? 8 : 4));
+static_assert(offsetof(CEconItemHandle, m_ulItemID) == (kTF2Items64Bit ? 16 : 8));
+static_assert(offsetof(CEconItemHandle, m_SteamID) == (kTF2Items64Bit ? 24 : 16));
+
+static_assert(sizeof(CAttributeList) == (kTF2Items64Bit ? 48 : 28));
+static_assert(offsetof(CAttributeList, m_Attributes) == (kTF2Items64Bit ? 8 : 4));
+static_assert(offsetof(CAttributeList, m_pAttributeManager) == (kTF2Items64Bit ? 40 : 24));
+
+static_assert(sizeof(CEconItemView) == (kTF2Items64Bit ? 208 : 148));
+static_assert(offsetof(CEconItemView, m_iItemDefinitionIndex) == (kTF2Items64Bit ? 8 : 4));
+static_assert(offsetof(CEconItemView, m_iEntityQuality) == (kTF2Items64Bit ? 12 : 8));
+static_assert(offsetof(CEconItemView, m_iEntityLevel) == (kTF2Items64Bit ? 16 : 12));
+static_assert(offsetof(CEconItemView, m_iItemID) == (kTF2Items64Bit ? 24 : 16));
+static_assert(offsetof(CEconItemView, m_ItemHandle) == (kTF2Items64Bit ? 48 : 40));
+static_assert(offsetof(CEconItemView, m_bInitialized) == (kTF2Items64Bit ? 100 : 84));
+static_assert(offsetof(CEconItemView, m_AttributeList) == (kTF2Items64Bit ? 104 : 88));
+static_assert(offsetof(CEconItemView, m_NetworkedDynamicAttributesForDemos) == (kTF2Items64Bit ? 152 : 116));
+static_assert(offsetof(CEconItemView, m_bDoNotIterateStaticAttributes) == (kTF2Items64Bit ? 200 : 144));
 
 struct TScriptedItemOverride
 {
+	// Matches MAX_ATTRIBUTES_PER_ITEM in the TF2 SDK.
+	static constexpr int MaxAttributes = 20;
+
 	uint8 m_bFlags;									// Flags to what we should override.
 	char m_strWeaponClassname[256];					// Classname to override the GiveNamedItem call with.
 	uint32 m_iItemDefinitionIndex;					// New Item Def. Index.
 	uint8 m_iEntityQuality;							// New Item Quality Level.
 	uint8 m_iEntityLevel;							// New Item Level.
 	uint8 m_iCount;									// Count of Attributes.
-	CEconItemAttribute m_Attributes[16];			// The actual attributes.
+	CEconItemAttribute m_Attributes[MaxAttributes];			// The actual attributes.
 };
 
 class TScriptedItemOverrideTypeHandler : public IHandleTypeDispatch
