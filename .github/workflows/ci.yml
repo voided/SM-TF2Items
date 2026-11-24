@@ -202,7 +202,7 @@ jobs:
               if [ "$os_name" = windows ]; then
                 suffix=dll
               fi
-              binary="tf2items.ext.2.ep2v.$suffix"
+              binary="tf2items.ext.2.tf2.$suffix"
               test -f "$x86/sourcemod/extensions/$binary"
               test -f "$x64/sourcemod/extensions/x64/$binary"
               mkdir -p "$package/addons"

@@ -1,7 +1,7 @@
 import os
 
-# Keep the name used by existing compiled SourcePawn plugins.
-name = 'tf2items.ext.2.ep2v'
+tf2_sdk = SdkHelpers.sdks['tf2']
+name = 'tf2items.ext.' + tf2_sdk['extension']
 project = builder.LibraryProject(name)
 project.sources += ['extension.cpp', 'sdk/smsdk_ext.cpp']
 binary = project.Configure(TF2Items.cxx, name, TF2Items.tag)
@@ -10,7 +10,7 @@ cxx = binary.compiler
 cxx.defines += ['SOURCEMOD_BUILD', 'SM_GENERATED_BUILD']
 for sdk in SdkHelpers.sdk_manifests:
     cxx.defines += ['SE_{}={}'.format(sdk['define'], sdk['code'])]
-SdkHelpers.configureCxx(builder, binary, SdkHelpers.sdks['tf2'])
+SdkHelpers.configureCxx(builder, binary, tf2_sdk)
 
 cxx.includes += [builder.currentSourcePath, os.path.join(builder.buildPath, builder.buildFolder)]
 cxx.cxxincludes += [

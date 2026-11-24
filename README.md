@@ -6,6 +6,8 @@ SourceMod extension for modifying items as Team Fortress 2 gives them to players
 
 CI builds for 32-bit and 64-bit TF2 on Linux and Windows against SourceMod 1.12 and 1.13. Each release archive includes both extension binaries, gamedata, an autoload marker, an example config, a SourcePawn include, and the compiled TF2Items Manager and its source. Extract the archive for your OS and SourceMod version into the server's `tf` directory.
 
+The extension is named `tf2items.ext.2.tf2`. When upgrading, move old `tf2items.ext.2.ep2v` and other TF2Items binaries out of both extension directories before installing the new package. Recompile plugins using the old TF2Items include so they reference the extension by its current generic name, `tf2items.ext`.
+
 The manager ships in `addons/sourcemod/plugins/optional`. To enable it, create `addons/sourcemod/configs/tf2items.weapons.txt` using the included example, then move `tf2items_manager.smx` into `addons/sourcemod/plugins`.
 
 To build locally, install [AMBuild 2.2 or newer](https://github.com/alliedmodders/ambuild) and use a compiler for the target architecture. On Windows, use the matching MSVC developer prompt. Clone SourceMod and Metamod:Source with their submodules, and check out the `tf2` branch of AlliedModders' HL2SDK. With all three dependency checkouts next to this repo, run the following from the TF2Items checkout.
