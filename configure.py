@@ -21,6 +21,8 @@ parser.options.add_argument('--mms-path', required=True, help='Path to Metamod:S
 parser.options.add_argument('--hl2sdk-path', required=True, help='Path to the TF2 HL2SDK')
 parser.options.add_argument('--manager-plugin', required=True,
                             help='Path to the compiled tf2items_manager.smx')
+parser.options.add_argument('--target', choices=['x86', 'x86_64'], default='x86',
+                            help='Target architecture (defaults to x86)')
 parser.options.add_argument('--version', type=release_version,
                             help='Version baked into the extension (defaults to product.version)')
 parser.options.add_argument('--enable-debug', action='store_true', help='Enable debug builds')

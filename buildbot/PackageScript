@@ -15,8 +15,11 @@ for folder, sources in files.items():
     for source in sources:
         builder.AddCopy(os.path.join(builder.sourcePath, source), folders[folder])
 
+extension_folder = folders['extensions']
+if TF2Items.cxx.target.arch == 'x86_64':
+    extension_folder = builder.AddFolder(os.path.join(sm_folder, 'extensions', 'x64'))
 for extension in TF2Items.extensions:
-    builder.AddCopy(extension.binary, folders['extensions'])
+    builder.AddCopy(extension.binary, extension_folder)
 
 manager_plugin = os.path.abspath(builder.options.manager_plugin)
 if not os.path.isfile(manager_plugin):

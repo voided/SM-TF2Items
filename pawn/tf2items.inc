@@ -95,8 +95,7 @@ native void TF2Items_SetQuality(Handle item, int quality);
 native void TF2Items_SetLevel(Handle item, int level);
 
 /**
- * Sets the number of attributes that will be used on the item. The maximum
- * number of attributes that can be allocated ranges from 0 to 15.
+ * Sets the number of attributes that will be used on the item, from 0 to 20.
  * 
  * @param item            Handle to the TF2Items object that we'll be operating with.
  * @param attributes      Number of attributes.
@@ -105,10 +104,10 @@ native void TF2Items_SetNumAttributes(Handle item, int attributes);
 
 /**
  * Setups the given attribute index to use the attribute and values specified
- * with iAttribDefIndex and flValue. Remember the iSlotIndex ranges from 0 to 15.
+ * with iAttribDefIndex and flValue. Remember the iSlotIndex ranges from 0 to 19.
  * 
  * @param item            Handle to the TF2Items object that we'll be operating with.
- * @param slot            The attribute slot index, ranges from 0 to 15.
+ * @param slot            The attribute slot index, ranges from 0 to 19.
  * @param attribute       The attribute definition index, as it appears on game_items.txt.
  * @param value           The value assigned to the attribute (how much health, damage, etc.).
  */
@@ -158,8 +157,7 @@ native int TF2Items_GetQuality(Handle item);
 native int TF2Items_GetLevel(Handle item);
 
 /**
- * Gets the number of attributes that will be used on the item. The maximum
- * number of attributes that can be allocated ranges from 0 to 15.
+ * Gets the number of attributes used on the item, from 0 to 20.
  *
  * @param item            Handle to the TF2Items object that we'll be operating with.
  * @return                Number of attributes.
@@ -168,7 +166,7 @@ native int TF2Items_GetNumAttributes(Handle item);
 
 /**
  * Retrieves the attribute definition index used at the specified index on the
- * item object. Remember the iSlotIndex ranges from 0 to 15.
+ * item object. Remember the iSlotIndex ranges from 0 to 19.
  *
  * @param item            Handle to the TF2Items object that we'll be operating with.
  * @return                The attribute definition index to use.
@@ -177,7 +175,7 @@ native int TF2Items_GetAttributeId(Handle item, int slot);
 
 /**
  * Retrieves the value used for the attribute at the specified index on the item
- * object. Remember the iSlotIndex ranges from 0 to 15.
+ * object. Remember the iSlotIndex ranges from 0 to 19.
  *
  * @param item            Handle to the TF2Items object that we'll be operating with.
  * @return                The attribute value to use.
@@ -207,7 +205,8 @@ forward void TF2Items_OnGiveNamedItem_Post(int client, char[] classname, int ite
 public Extension __ext_tf2items = 
 {
 	name = "TF2Items",
-	file = "tf2items.ext.2.ep2v",
+	// Match SourceMod's name for tf2items.autoload.
+	file = "tf2items.ext",
 #if defined AUTOLOAD_EXTENSIONS
 	autoload = 1,
 #else

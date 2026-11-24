@@ -5,7 +5,7 @@ class TF2ItemsConfig:
         self.sm_root = os.path.abspath(builder.options.sm_path)
         self.mms_root = os.path.abspath(builder.options.mms_path)
         self.sdk_root = os.path.abspath(builder.options.hl2sdk_path)
-        self.cxx = builder.DetectCxx(target_arch='x86')
+        self.cxx = builder.DetectCxx(target_arch=builder.options.target)
         self.extensions = []
 
         if self.cxx.target.platform not in ('linux', 'windows'):
