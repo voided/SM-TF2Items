@@ -205,7 +205,8 @@ forward void TF2Items_OnGiveNamedItem_Post(int client, char[] classname, int ite
 public Extension __ext_tf2items = 
 {
 	name = "TF2Items",
-	file = "tf2items.ext.2.ep2v",
+	// Match SourceMod's name for tf2items.autoload.
+	file = "tf2items.ext",
 #if defined AUTOLOAD_EXTENSIONS
 	autoload = 1,
 #else
