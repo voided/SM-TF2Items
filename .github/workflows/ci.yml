@@ -1,0 +1,205 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.compute.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Compute version
+        id: compute
+        run: |
+          base_version=$(cat product.version)
+          [[ "$base_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          build_number=$(git rev-list --count HEAD)
+          echo "version=${base_version}.${build_number}" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: sm${{ matrix.sm.label }}-${{ matrix.target.os_name }}-x86
+    needs: [version, build-manager]
+    runs-on: ${{ matrix.target.runner }}
+    container: ${{ matrix.target.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        sm:
+          - label: "1.12"
+            branch: 1.12-dev
+          - label: "1.13"
+            branch: master
+        target:
+          - runner: ubuntu-latest
+            os_name: linux
+            container: ghcr.io/alliedmodders/build-containers/debian11-clang22:latest
+            python: python3
+          - runner: windows-latest
+            os_name: windows
+            python: python
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Python (Windows)
+        if: matrix.target.os_name == 'windows'
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Setup MSVC (Windows)
+        if: matrix.target.os_name == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86
+
+      - name: Install AMBuild (Windows)
+        if: matrix.target.os_name == 'windows'
+        run: python -m pip install git+https://github.com/alliedmodders/ambuild.git
+
+      - name: Clone dependencies
+        shell: bash
+        env:
+          SM_BRANCH: ${{ matrix.sm.branch }}
+        run: |
+          git clone --depth 1 --recurse-submodules --shallow-submodules -j8 \
+            --branch "$SM_BRANCH" https://github.com/alliedmodders/sourcemod.git sourcemod
+          git clone --depth 1 --recurse-submodules --shallow-submodules -j8 \
+            --branch 1.12-dev https://github.com/alliedmodders/metamod-source.git mmsource
+          git clone --depth 1 --branch tf2 https://github.com/alliedmodders/hl2sdk.git hl2sdk-tf2
+
+      - name: Download TF2Items Manager
+        uses: actions/download-artifact@v8
+        with:
+          name: manager-sm${{ matrix.sm.label }}
+          path: compiled
+
+      - name: Build
+        shell: bash
+        env:
+          PYTHON: ${{ matrix.target.python }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            export CC=clang-22 CXX=clang++-22
+          fi
+          mkdir build
+          cd build
+          "$PYTHON" ../configure.py \
+            --sm-path ../sourcemod \
+            --mms-path ../mmsource \
+            --hl2sdk-path ../hl2sdk-tf2 \
+            --manager-plugin ../compiled/tf2items_manager.smx \
+            --version "$VERSION" \
+            --enable-optimize
+          ambuild
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: pkg-sm${{ matrix.sm.label }}-${{ matrix.target.os_name }}-x86
+          path: build/package/addons
+          if-no-files-found: error
+
+  build-manager:
+    name: build-manager-sm${{ matrix.sm.label }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sm:
+          - label: "1.12"
+            branch: 1.12-dev
+          - label: "1.13"
+            branch: master
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Clone SourceMod includes
+        env:
+          SM_BRANCH: ${{ matrix.sm.branch }}
+        run: git clone --depth 1 --branch "$SM_BRANCH" https://github.com/alliedmodders/sourcemod.git sourcemod
+
+      - name: Compile TF2Items Manager
+        env:
+          SM_BRANCH: ${{ matrix.sm.branch }}
+        run: |
+          mkdir compiled
+          docker run --rm -v "$GITHUB_WORKSPACE:/work" -w /work \
+            "ghcr.io/alliedmodders/sourcemod-spcomp:$SM_BRANCH" \
+            -i pawn -i sourcemod/plugins/include pawn/tf2items_manager.sp \
+            -o compiled/tf2items_manager.smx
+
+      - name: Upload TF2Items Manager
+        uses: actions/upload-artifact@v7
+        with:
+          name: manager-sm${{ matrix.sm.label }}
+          path: compiled/tf2items_manager.smx
+          if-no-files-found: error
+
+  release:
+    name: Release
+    needs: [version, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          pattern: pkg-*
+
+      - name: Assemble packages
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          mkdir assets
+          for sm in 1.12 1.13; do
+            windows="TF2Items-${VERSION}-sm${sm}-windows.zip"
+            linux="TF2Items-${VERSION}-sm${sm}-linux.tar.gz"
+            windows_pkg="artifacts/pkg-sm${sm}-windows-x86"
+            linux_pkg="artifacts/pkg-sm${sm}-linux-x86"
+            test -f "$windows_pkg/sourcemod/extensions/tf2items.ext.2.ep2v.dll"
+            test -f "$linux_pkg/sourcemod/extensions/tf2items.ext.2.ep2v.so"
+            test -f "$windows_pkg/sourcemod/plugins/optional/tf2items_manager.smx"
+            test -f "$linux_pkg/sourcemod/plugins/optional/tf2items_manager.smx"
+            mkdir -p "packages/$sm/windows/addons" "packages/$sm/linux/addons"
+            cp -a "$windows_pkg/." "packages/$sm/windows/addons/"
+            cp -a "$linux_pkg/." "packages/$sm/linux/addons/"
+            (cd "packages/$sm/windows" && python3 -m zipfile -c "../../../assets/$windows" addons)
+            tar -czf "assets/$linux" -C "packages/$sm/linux" addons
+          done
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "TF2Items $VERSION" \
+            --notes "Automated release built from $GITHUB_SHA."
